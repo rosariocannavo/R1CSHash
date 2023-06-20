@@ -1,5 +1,5 @@
-
 use ark_bls12_377::{Fq, Fr};
+use ark_r1cs_std::{fields::fp::FpVar, groups::CurveVar, prelude::*};
 use ark_ff::{BigInteger, PrimeField, UniformRand};
 use ark_relations::{
     ns,
@@ -13,16 +13,14 @@ use ark_sponge::{
     CryptographicSponge,
   };
 
-use ark_r1cs_std::{fields::fp::FpVar, groups::CurveVar, prelude::*};
-
 use ark_bw6_761::BW6_761 as P;
-
-
 use ark_groth16::Groth16;
 use ark_crypto_primitives::{CircuitSpecificSetupSNARK, SNARK};
 
 use crate::poseidon;
 
+
+//this circuit want to verify if y = H(x) with x witness
 #[derive(Clone)]
 pub struct HashVerification {
     pub params: PoseidonParameters<Fq>,
@@ -43,14 +41,12 @@ impl ConstraintSynthesizer<Fq> for HashVerification {
       
     
       let x = 
-         FpVar::new_witness(ns!(cs.clone(), "point"), || Ok(self.x.clone())).unwrap();
+         FpVar::new_witness(ns!(cs.clone(), "value"), || Ok(self.x.clone())).unwrap();
 
   
       sponge_var.absorb(&x).unwrap();
   
       let hash_var = sponge_var.squeeze_field_elements(1).unwrap().remove(0); 
-
-
 
   
       hash_var.enforce_equal(&exp_hash_var)?;
@@ -70,8 +66,7 @@ impl ConstraintSynthesizer<Fq> for HashVerification {
 
     let scalar: ark_ff::Fp384<ark_bls12_377::FqParameters> = Fq::rand(&mut rng);
 
-    sponge.absorb(&scalar.into_repr().to_bits_le());
-
+    sponge.absorb(&scalar);
 
   
     let hash = sponge.squeeze_field_elements::<Fq>(1).remove(0);
@@ -101,7 +96,8 @@ fn preimage_constraints_correctness() {
   let scalar: ark_ff::Fp384<ark_bls12_377::FqParameters> = Fq::rand(&mut rng);
 
   let mut sponge = PoseidonSponge::new(&params);
-  sponge.absorb(&scalar.into_repr().to_bits_le());
+  
+  sponge.absorb(&scalar);
 
   let hash = sponge.squeeze_field_elements::<Fq>(1).remove(0);
 
@@ -110,6 +106,7 @@ fn preimage_constraints_correctness() {
       x: scalar,
       y: hash,
     };
+
   let cs = ConstraintSystem::<Fq>::new_ref();
 
   circuit.generate_constraints(cs.clone()).unwrap();
@@ -120,7 +117,6 @@ fn preimage_constraints_correctness() {
     println!("{:?}", cs.which_is_unsatisfied());
   }
   assert!(is_satisfied);
-
 
 }
   
