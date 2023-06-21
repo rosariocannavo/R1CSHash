@@ -96,7 +96,7 @@ fn preimage_constraints_correctness() {
   let scalar: ark_ff::Fp384<ark_bls12_377::FqParameters> = Fq::rand(&mut rng);
 
   let mut sponge = PoseidonSponge::new(&params);
-  
+
   sponge.absorb(&scalar);
 
   let hash = sponge.squeeze_field_elements::<Fq>(1).remove(0);
@@ -116,6 +116,7 @@ fn preimage_constraints_correctness() {
     // find the offending constraint
     println!("{:?}", cs.which_is_unsatisfied());
   }
+  
   assert!(is_satisfied);
 
 }

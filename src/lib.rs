@@ -6,5 +6,6 @@ extern crate lazy_static;
 
 mod parameters;
 pub mod poseidon;
-
 mod r1cs_hash;
+
+mod r1cs_key;
