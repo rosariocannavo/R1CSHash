@@ -49,7 +49,7 @@ fn main() {
     // Multiply the field element by the curve point
     let multiplied_point: ark_ec::short_weierstrass_jacobian::GroupProjective<ark_bls12_381::g1::Parameters> = curve_point.mul(field_element.into_repr());
 
-    // Convert the result to an affine point for further operations if needed
+    // Convert the result to an affine point for further operations if needed   
     let multiplied_point_affine = multiplied_point.into_affine();
 
     // Print the resulting affine point
