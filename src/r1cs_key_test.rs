@@ -27,13 +27,13 @@ impl ConstraintSynthesizer<Fq> for KeyVerification {
         let generator = G1Projective::prime_subgroup_generator();
 
         let exp_y_x = 
-            FpVar::new_input(ns!(cs.clone(), "point"), || Ok(self.y_x.clone())).unwrap();
+            FpVar::new_input(ns!(cs.clone(), "exp_x"), || Ok(self.y_x.clone())).unwrap();
 
         let exp_y_y =
-            FpVar::new_input(ns!(cs.clone(), "point"), || Ok(self.y_y.clone())).unwrap();
+            FpVar::new_input(ns!(cs.clone(), "exp_y"), || Ok(self.y_y.clone())).unwrap();
 
         let exp_y_z =
-            FpVar::new_input(ns!(cs.clone(), "point"), || Ok(self.y_z.clone())).unwrap();
+            FpVar::new_input(ns!(cs.clone(), "exp_z"), || Ok(self.y_z.clone())).unwrap();
 
         //let x_var = FpVar::new_witness(ns!(cs.clone(), "value"), || Ok(self.x.clone())).unwrap();
 
@@ -42,14 +42,14 @@ impl ConstraintSynthesizer<Fq> for KeyVerification {
         println!("{:?}", multiplied_point);
 
         let calc_y_x= 
-            FpVar::new_witness(ns!(cs.clone(), "point"), || Ok(multiplied_point.x)).unwrap();
+            FpVar::new_witness(ns!(cs.clone(), "calc_x"), || Ok(multiplied_point.x)).unwrap();
 
         let calc_y_y= 
-            FpVar::new_witness(ns!(cs.clone(), "point"), || Ok(multiplied_point.y)).unwrap();
+            FpVar::new_witness(ns!(cs.clone(), "calc_y"), || Ok(multiplied_point.y)).unwrap();
 
 
         let calc_y_z= 
-            FpVar::new_witness(ns!(cs.clone(), "point"), || Ok(multiplied_point.z)).unwrap();
+            FpVar::new_witness(ns!(cs.clone(), "calc_z"), || Ok(multiplied_point.z)).unwrap();
 
 
         calc_y_x.enforce_equal(&exp_y_x)?;
