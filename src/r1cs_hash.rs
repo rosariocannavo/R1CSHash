@@ -39,16 +39,13 @@ impl ConstraintSynthesizer<Fq> for HashVerification {
       let exp_hash_var =
         FpVar::<Fq>::new_input(ns!(cs.clone(), "hash"), || Ok(self.y.clone())).unwrap();
       
-    
       let x = 
          FpVar::new_witness(ns!(cs.clone(), "value"), || Ok(self.x.clone())).unwrap();
 
-  
       sponge_var.absorb(&x).unwrap();
   
       let hash_var = sponge_var.squeeze_field_elements(1).unwrap().remove(0); 
 
-  
       hash_var.enforce_equal(&exp_hash_var)?;
   
       Ok(())
@@ -68,10 +65,8 @@ impl ConstraintSynthesizer<Fq> for HashVerification {
 
     sponge.absorb(&scalar);
 
-  
     let hash = sponge.squeeze_field_elements::<Fq>(1).remove(0);
 
-  
     let circuit = HashVerification {
       params: params,
       x: scalar,

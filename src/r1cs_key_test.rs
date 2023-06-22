@@ -1,10 +1,11 @@
-use ark_bls12_377::{constraints::G1Var,Fq, G1Projective};
-use ark_r1cs_std::{prelude::*};
-use ark_ff::{PrimeField};
+use ark_bls12_377::{Fq, G1Projective};
+use ark_r1cs_std::{fields::fp::FpVar, prelude::*};
+use ark_ff::{ PrimeField};
 use ark_relations::{
     ns,
     r1cs::{ConstraintSynthesizer, ConstraintSystem, ConstraintSystemRef, SynthesisError},
   };
+
 
 use ark_ec::{ProjectiveCurve};
 
@@ -15,27 +16,45 @@ struct KeyVerification {
     x: Fq,
 
     //public input
-    y: G1Projective,
+    y_x: Fq,
+    y_y: Fq,
+    y_z: Fq,
 }
 
 impl ConstraintSynthesizer<Fq> for KeyVerification {
     fn generate_constraints(self, cs: ConstraintSystemRef<Fq>) -> Result<(), SynthesisError> {
   
         let generator = G1Projective::prime_subgroup_generator();
-    
-        let exp_y = 
-            G1Var::new_input(ns!(cs.clone(), "point"), || Ok(self.y.clone())).unwrap();
-  
+
+        let exp_y_x = 
+            FpVar::new_input(ns!(cs.clone(), "point"), || Ok(self.y_x.clone())).unwrap();
+
+        let exp_y_y =
+            FpVar::new_input(ns!(cs.clone(), "point"), || Ok(self.y_y.clone())).unwrap();
+
+        let exp_y_z =
+            FpVar::new_input(ns!(cs.clone(), "point"), || Ok(self.y_z.clone())).unwrap();
+
         //let x_var = FpVar::new_witness(ns!(cs.clone(), "value"), || Ok(self.x.clone())).unwrap();
 
         let multiplied_point = generator.mul(self.x.into_repr());
         
         println!("{:?}", multiplied_point);
 
-        let calc_y= 
-            G1Var::new_witness(ns!(cs.clone(), "point"), || Ok(multiplied_point)).unwrap();
+        let calc_y_x= 
+            FpVar::new_witness(ns!(cs.clone(), "point"), || Ok(multiplied_point.x)).unwrap();
 
-        calc_y.enforce_equal(&exp_y)?;
+        let calc_y_y= 
+            FpVar::new_witness(ns!(cs.clone(), "point"), || Ok(multiplied_point.y)).unwrap();
+
+
+        let calc_y_z= 
+            FpVar::new_witness(ns!(cs.clone(), "point"), || Ok(multiplied_point.z)).unwrap();
+
+
+        calc_y_x.enforce_equal(&exp_y_x)?;
+        calc_y_y.enforce_equal(&exp_y_y)?;
+        calc_y_z.enforce_equal(&exp_y_z)?;
   
         Ok(())
     }
@@ -53,27 +72,27 @@ impl ConstraintSynthesizer<Fq> for KeyVerification {
     let field_element = ark_bls12_377::Fq::from(42); // Replace 42 with your desired field element
     let generator = G1Projective::prime_subgroup_generator();
 
-
     // Multiply the field element by the curve point
     let multiplied_point = generator.mul(field_element.into_repr());
 
     let circuit = KeyVerification {
       x: field_element,
-      y: multiplied_point,
+      y_x: multiplied_point.x,
+      y_y: multiplied_point.y,
+      y_z: multiplied_point.z,
     };
   
     let (pk, vk) = Groth16::<P>::setup(circuit.clone(), &mut rng).unwrap();
   
     let proof = Groth16::prove(&pk, circuit.clone(), &mut rng).unwrap();
 
-    //this don't work
-
-    // let is_verified = Groth16::verify(&vk, &[multiplied_point], &proof).unwrap();
+    let is_verified = Groth16::verify(&vk, &[multiplied_point.x, multiplied_point.y, multiplied_point.z], &proof).unwrap();
   
-    // assert!(is_verified);
+    assert!(is_verified);
   }
   
-  #[test]
+
+#[test]
 fn preimage_constraints_correctness() {
 
     let field_element = ark_bls12_377::Fq::from(42); // Replace 42 with your desired field element
@@ -85,9 +104,11 @@ fn preimage_constraints_correctness() {
 
 
     let circuit = KeyVerification {
-      x: field_element,
-      y: multiplied_point,
-    };
+        x: field_element,
+        y_x: multiplied_point.x,
+        y_y: multiplied_point.y,
+        y_z: multiplied_point.z,
+      };
 
   let cs = ConstraintSystem::<Fq>::new_ref();
 
