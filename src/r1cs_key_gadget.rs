@@ -59,11 +59,6 @@ where
         let mut bg = ag.clone();
        
         bg.mul_assign(c);
-        
-
-       /* println!("c: {:?}", c);
-        println!("ag: {:?}", ag);
-        println!("bg: {:?}", bg);*/
 
         Self {
             c:c,
@@ -156,6 +151,7 @@ mod tests {
       
         println!("sto alloppando");
         let proof = Groth16::prove(&pk, circuit.clone(), &mut rng).unwrap();
+
         /*Error here*/
        // let is_verified = Groth16::verify(&vk, &[c, ag, bg,iv, i], &proof).unwrap();
        // assert!(is_verified);
@@ -164,27 +160,9 @@ mod tests {
     
     #[test]
     fn preimage_constraints_correctness() {
-
-        //bg = c * ag
-
-        // let ag = ark_bls12_377::G1Projective::prime_subgroup_generator();
-
         let mut rng = ark_std::test_rng();
-
-        // let c = ark_bls12_377::Fr::rand(&mut rng); // Replace 42 with your desired field element
-
-
-        // let scalar_in_fq = &ark_bls12_377::Fq::from_repr(<ark_bls12_377::Fq as PrimeField>::BigInt::from_bits_le(
-        //     &c.into_repr().to_bits_le(),
-        // ))
-        // .unwrap();
-
-        // let cag = ag.clone();
-        // //let bits_c = c.to_bits_le()?;
-        // cag.mul_assign(c);  
-
-
         let cs = ConstraintSystem::<<I as PairingEngine>::Fq>::new_ref();
+
         FqCircuit::<I, IV>::new(&mut rng)
             .generate_constraints(cs.clone())
             .unwrap();
