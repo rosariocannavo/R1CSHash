@@ -146,10 +146,8 @@ mod tests {
         let iv = circuit._iv;
         let i = circuit._i;
 
-        println!("sto alloppando");
         let (pk, vk) = Groth16::<P>::setup(circuit.clone(), &mut rng).unwrap();
       
-        println!("sto alloppando");
         let proof = Groth16::prove(&pk, circuit.clone(), &mut rng).unwrap();
 
         /*Error here*/
