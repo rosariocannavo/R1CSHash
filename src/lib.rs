@@ -10,4 +10,6 @@ mod r1cs_hash;
 mod r1cs_key;
 mod r1cs_key_test;
 
+mod r1cs_key_gadget;
+
 
