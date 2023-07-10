@@ -12,4 +12,8 @@ mod r1cs_key_test;
 
 mod r1cs_key_gadget;
 
+mod r1cs_pairing;
+
+mod r1cs_pairing_with_mul;
+
 
