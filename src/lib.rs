@@ -16,4 +16,5 @@ mod r1cs_pairing;
 
 mod r1cs_pairing_with_mul;
 
+mod r1cs_pairing_sum;
 
