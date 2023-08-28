@@ -1,7 +1,8 @@
 
 
-use ark_ec::PairingEngine;
-use ark_ff::{BigInteger, PrimeField};
+use ark_ff::{BigInteger, PrimeField, Field};
+
+use ark_bls12_381::{Fq};
 
 use ark_r1cs_std::{
     alloc::AllocVar,
@@ -15,6 +16,7 @@ use ark_relations::{
     ns,
     r1cs::{ConstraintSynthesizer, ConstraintSystemRef, SynthesisError},
 };
+use ark_ec::{AffineCurve, PairingEngine, ProjectiveCurve};
 
 
 use ark_std::{
@@ -25,15 +27,13 @@ use ark_std::{
 use std::ops::MulAssign;
 
 
+
 #[derive(Clone)]
 struct PairingCircuit<I, IV>
 where
     I: PairingEngine,
     IV: PairingVar<I>,
-{
-
-    c: Vec<I::Fr>,
-    
+{    
     A: Vec<I::G1Projective>,
 
     B: Vec<I::G2Projective>,
@@ -54,32 +54,54 @@ where
     IV::GTVar: ToConstraintFieldGadget<I::Fq>,
 {
     fn generate_constraints(self, cs: ConstraintSystemRef<I::Fq>) -> Result<(), SynthesisError> {
-        //Proving I know A, and B and c such that e(cA,B) = T
-        let mut mult_acc;
-        for i in 0..=self.c.len() {
-            let ag = IV::G1Var::new_witness(ns!(cs, "ag"), || Ok(self.A[i]))?;
-            let bg = IV::G2Var::new_witness(ns!(cs, "bg"), || Ok(self.B[i]))?;
-
-            let scalar_in_fq = &I::Fq::from_repr(<I::Fq as PrimeField>::BigInt::from_bits_le(
-                &self.c[i].into_repr().to_bits_le(),
-            ))
-            .unwrap();
-    
-            let c = FpVar::new_witness(ns!(cs, "c"), || Ok(scalar_in_fq))?;
-            let bits_c = c.to_bits_le()?;
-            let ag_c = ag.scalar_mul_le(bits_c.iter())?;
-    
-            let pag = IV::prepare_g1(&ag_c)?;
-            let pbg = IV::prepare_g2(&bg)?;
+        //Proving I know A, and B and c such that e(c_i*A_i,B_i) = T
+        // let mut mult_acc;
+        // for i in 0..=self.c.len() {
             
-            let res_g =  IV::pairing(pag, pbg)?;
+        //     let ag = IV::G1Var::new_witness(ns!(cs, "ag"), || Ok(self.A[i]))?;
+        //     let bg = IV::G2Var::new_witness(ns!(cs, "bg"), || Ok(self.B[i]))?;
 
-            mult_acc *= res_g;
-        }
+        //     let scalar_in_fq = &I::Fq::from_repr(<I::Fq as PrimeField>::BigInt::from_bits_le(
+        //         &self.c[i].into_repr().to_bits_le(),
+        //     ))
+        //     .unwrap();
+    
+        //     let c = FpVar::new_witness(ns!(cs, "c"), || Ok(scalar_in_fq))?;
+        //     let bits_c = c.to_bits_le()?;
+        //     let ag_c = ag.scalar_mul_le(bits_c.iter())?;
+    
+        //     let pag = IV::prepare_g1(&ag_c)?;
+        //     let pbg = IV::prepare_g2(&bg)?;
+            
+        //     let res_g =  IV::pairing(pag, pbg)?;
+
+        //     mult_acc *= res_g;
+        // }
 
         let t_g = IV::GTVar::new_input(ns!(cs, "CT"), || Ok(self.T))?;
         
-        t_g.enforce_equal(&mult_acc)?;
+
+
+        let mut ps = Vec::new();
+        let mut qs = Vec::new();
+
+        for i in 0..self.A.len() {
+            let bg = IV::G2Var::new_witness(ns!(cs, "bg"), || Ok(self.B[i]))?;
+            let ag = IV::G1Var::new_witness(ns!(cs, "ag"), || Ok(self.A[i]))?;
+            let pag = IV::prepare_g1(&ag)?;
+            let pbg = IV::prepare_g2(&bg)?;
+            ps.push(pag);
+            qs.push(pbg);
+        }
+                
+        let c_ml = IV::miller_loop(&ps, &qs)?;
+        let res = IV::final_exponentiation(&c_ml).unwrap();
+
+
+        println!("{:?}", res);
+
+        t_g.enforce_equal(&res)?;
+
 
         Ok(())
 
@@ -96,57 +118,48 @@ where
     pub fn new<R: Rng + CryptoRng>(
         mut rng: &mut R,
     ) -> Self {
-        //ag_c = c * ag
-        //tg = e(ag_c, bg)
-        let mut c: Vec<I::Fr> = Vec::new();
-        let mut ag: Vec<I::G1Projective> = Vec::new();
+    
+        let mut ag: Vec<I::G1Projective> = Vec::new();  
         let mut bg: Vec<I::G2Projective> = Vec::new();
 
-        for i in 0..=5 {
-            c[i] = I::Fr::rand(&mut rng);
-            ag[i] = I::G1Projective::rand(&mut rng);
-            bg[i] = I::G2Projective::rand(&mut rng);
+        for _ in 0..=5 {
+            ag.push(I::G1Projective::rand(&mut rng));
+            bg.push(I::G2Projective::rand(&mut rng));
         }
-        let mut tg_tot;
-        let ag_c = ag[0].clone();
-        let tg = I::pairing(ag_c, bg[0]);
-        tg_tot = tg;
-        for j in 1..=5 {
-            let ag_c = ag[j].clone();
-            let tg = I::pairing(ag_c, bg[j]);
-            tg_tot *= tg;
+
+
+       // let mut accumulator = I::Fqk::zero(); // Accumulator initialized to the identity element of the target group
+
+        for i in 0..ag.len() {
+            let g1_point = &ag[i];
+            let g2_point = &bg[i];
+        
+
+            // Perform the squaring operation in the Miller loop
+            //accumulator *=
+            let m_l = I::miller_loop([&(g1_point.into_affine().into(), 
+                               g2_point.into_affine().into()),
+                            ]);
+
+            let res  = I::final_exponentiation(&m_l);
+        
+            accumulator  *= res;
         }
-       
         Self {
-            c:c,
             A: ag,
             B: bg,
-            T: tg_tot,
+            T: accumulator,
             _iv: PhantomData,
             _i: PhantomData,
         }
+    
 
+        }
     }
+        
 
-}
 
 
-// impl<I, IV> Clone for PairingCircuit<I, IV>
-// where
-//     I: PairingEngine,
-//     IV: PairingVar<I>,
-// {
-//     fn clone(&self) -> Self {
-//         Self {
-//             c: self.c,
-//             A: self.A,
-//             B: self.B,    
-//             T: self.T,
-//             _iv: self._iv,
-//             _i: self._i,
-//         }
-//     }
-// }
 
 #[cfg(test)]
 mod tests {
@@ -171,27 +184,3 @@ mod tests {
 
     }
 }
-//     #[test]
-//     fn with_groth() {
-//         let mut rng = ark_std::test_rng();  
-
-//         let circuit = PairingCircuit::<I, IV>::new(&mut rng);
-
-//         let ag = circuit.A;
-//         let c = circuit.c;
-//         let bg = circuit.B;
-//         let tg = circuit.T;
-//         let iv = circuit._iv;
-//         let i = circuit._i;
-
-//         let (pk, vk) = Groth16::<P>::setup(circuit.clone(), &mut rng).unwrap();
-      
-//         let proof = Groth16::prove(&pk, circuit.clone(), &mut rng).unwrap();
-
-//         /*Error here*/
-//         //let is_verified = Groth16::verify(&vk, &[c, ag, bg,iv, i], &proof).unwrap();
-//        // assert!(is_verified);
-
-//     }
-
-// }
