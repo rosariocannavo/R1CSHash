@@ -55,32 +55,8 @@ where
 {
     fn generate_constraints(self, cs: ConstraintSystemRef<I::Fq>) -> Result<(), SynthesisError> {
         //Proving I know A, and B and c such that e(c_i*A_i,B_i) = T
-        // let mut mult_acc;
-        // for i in 0..=self.c.len() {
-            
-        //     let ag = IV::G1Var::new_witness(ns!(cs, "ag"), || Ok(self.A[i]))?;
-        //     let bg = IV::G2Var::new_witness(ns!(cs, "bg"), || Ok(self.B[i]))?;
-
-        //     let scalar_in_fq = &I::Fq::from_repr(<I::Fq as PrimeField>::BigInt::from_bits_le(
-        //         &self.c[i].into_repr().to_bits_le(),
-        //     ))
-        //     .unwrap();
-    
-        //     let c = FpVar::new_witness(ns!(cs, "c"), || Ok(scalar_in_fq))?;
-        //     let bits_c = c.to_bits_le()?;
-        //     let ag_c = ag.scalar_mul_le(bits_c.iter())?;
-    
-        //     let pag = IV::prepare_g1(&ag_c)?;
-        //     let pbg = IV::prepare_g2(&bg)?;
-            
-        //     let res_g =  IV::pairing(pag, pbg)?;
-
-        //     mult_acc *= res_g;
-        // }
 
         let t_g = IV::GTVar::new_input(ns!(cs, "CT"), || Ok(self.T))?;
-        
-
 
         let mut ps = Vec::new();
         let mut qs = Vec::new();
@@ -97,11 +73,7 @@ where
         let c_ml = IV::miller_loop(&ps, &qs)?;
         let res = IV::final_exponentiation(&c_ml).unwrap();
 
-
-        println!("{:?}", res);
-
         t_g.enforce_equal(&res)?;
-
 
         Ok(())
 
